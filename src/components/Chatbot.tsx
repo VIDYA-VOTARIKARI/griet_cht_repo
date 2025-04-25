@@ -1,80 +1,97 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import React, { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MessageCircle, X, Send, Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { Card, CardContent } from "./ui/card";
+import { Input } from "./ui/input"
+import { Button } from "./ui/button";
+
+// Gemini API setup
+const API_KEY = import.meta.env.AIzaSyDTziOnlIL24McMhOvtbQW23QqktVgOP2Q;
+
+const GRIET_RULES = [
+  "You are a helpful assistant for GRIET College.",
+  "Only answer questions related to GRIET.",
+  "If asked anything not related to GRIET, politely decline.",
+];
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 }
 
 const quickReplies = [
-  'What are the admission requirements?',
-  'Tell me about placements',
-  'What courses are offered?',
-  'How to contact the college?'
+  "What are the admission requirements?",
+  "Tell me about placements",
+  "What courses are offered?",
+  "How to contact the college?",
 ];
 
-const Chatbot = () => {
+const Chatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: "Hi! I'm the GRIET Assistant. Ask me anything about our college!" }
+    {
+      role: "assistant",
+      content: "Hi! I'm your GRIET Assistant. Ask me anything about our college!",
+    },
   ]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    const userMessage = input.trim();
-    setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    const userInput = input.trim();
+    setInput("");
+    setMessages((prev) => [...prev, { role: "user", content: userInput }]);
     setIsLoading(true);
 
     try {
-      // Simulate AI response for now
-      const response = await new Promise<string>((resolve) => {
-        setTimeout(() => {
-          const responses: { [key: string]: string } = {
-            'admission': 'GRIET offers admissions through EAMCET counseling (70% seats) and management quota (30% seats). The admission process typically starts in March.',
-            'placement': 'GRIET has an excellent placement record with 95% placement rate. Top recruiters include Microsoft, Amazon, and other leading companies.',
-            'course': 'GRIET offers various B.Tech programs including CSE, IT, ECE, EEE, Mechanical, and Civil Engineering. We also offer M.Tech programs.',
-            'contact': 'You can reach GRIET at: Phone: +91-40-42985000, Email: info@griet.ac.in, Address: Bachupally, Kukatpally, Hyderabad - 500090'
-          };
-
-          const defaultResponse = "I'm here to help you with information about GRIET. Please ask about admissions, courses, placements, or contact details.";
-          
-          const matchingKey = Object.keys(responses).find(key => 
-            userMessage.toLowerCase().includes(key)
-          );
-          
-          resolve(matchingKey ? responses[matchingKey] : defaultResponse);
-        }, 1000);
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" + "AIzaSyDTziOnlIL24McMhOvtbQW23QqktVgOP2Q", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: `${GRIET_RULES.join(" ")} ${userInput}` }],
+            },
+          ],
+        }),
       });
 
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
-    } catch (error) {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: "I'm sorry, I couldn't process your request. Please try again." 
-      }]);
+      const data = await res.json();
+      const botReply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            botReply ??
+            "⚠️ Oops! I couldn't generate a response. Please try again or ask something else about GRIET.",
+        },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "⚠️ There was an error reaching the server. Please try again later.",
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleQuickReply = (reply: string) => {
-    setInput(reply);
-  };
+  const handleQuickReply = (text: string) => setInput(text);
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
@@ -84,88 +101,85 @@ const Chatbot = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-16 right-0 w-96 h-[500px] bg-white dark:bg-gray-800 rounded-lg shadow-xl flex flex-col"
+            className="w-96 h-[500px] bg-white dark:bg-gray-900 shadow-xl rounded-xl flex flex-col"
           >
             {/* Header */}
-            <div className="p-4 border-b dark:border-gray-700 bg-blue-900 text-white rounded-t-lg flex justify-between items-center">
-              <h3 className="font-semibold">GRIET Assistant</h3>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-blue-800 rounded-full transition-colors"
-              >
+            <div className="bg-violet-700 text-white p-4 flex justify-between items-center rounded-t-xl">
+              <span className="font-semibold text-lg">GRIET Chatbot</span>
+              <button onClick={() => setIsOpen(false)}>
                 <X size={20} />
               </button>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((message, index) => (
+            {/* Chat */}
+            <div className="flex-1 p-4 overflow-y-auto space-y-3">
+              {messages.map((msg, i) => (
                 <div
-                  key={index}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  key={i}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      message.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                    className={`max-w-[80%] p-3 text-sm rounded-xl ${
+                      msg.role === "user"
+                        ? "bg-violet-600 text-white"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white"
                     }`}
                   >
-                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
                 </div>
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
-                    <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                  <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-xl">
+                    <Loader2 className="w-5 h-5 animate-spin text-violet-700" />
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Replies */}
-            <div className="p-4 border-t dark:border-gray-700">
-              <div className="flex flex-wrap gap-2 mb-4">
-                {quickReplies.map((reply) => (
+            {/* Quick Replies & Input */}
+            <div className="px-4 pb-2">
+              <div className="flex flex-wrap gap-2 mb-2">
+                {quickReplies.map((text) => (
                   <button
-                    key={reply}
-                    onClick={() => handleQuickReply(reply)}
-                    className="text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    key={text}
+                    className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 dark:text-white rounded-full hover:bg-gray-300 dark:hover:bg-gray-600"
+                    onClick={() => handleQuickReply(text)}
                   >
-                    {reply}
+                    {text}
                   </button>
                 ))}
               </div>
               <div className="flex gap-2">
-                <input
-                  type="text"
+                <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
                   placeholder="Type your message..."
-                  className="flex-1 p-2 border dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-                <button
-                  onClick={handleSend}
                   disabled={isLoading}
-                  className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="flex-1 dark:bg-gray-800 dark:text-white"
+                />
+                <Button
+                  onClick={handleSend}
+                  disabled={!input.trim() || isLoading}
+                  className="bg-violet-600 hover:bg-violet-700 text-white"
                 >
-                  <Send size={20} />
-                </button>
+                  <Send size={18} />
+                </Button>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Chat Button */}
+      {/* Toggle Chat Button */}
       <motion.button
         whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="p-4 bg-violet-700 hover:bg-violet-800 text-white rounded-full shadow-lg"
       >
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
       </motion.button>

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -27,15 +27,21 @@ function App() {
               <Route path="/departments" element={<Departments />} />
               <Route path="/placements" element={<Placements />} />
               <Route path="/contact" element={<Contact />} />
-              <Route path="*" element={
-                <div className="min-h-screen flex items-center justify-center">
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Page Coming Soon</h1>
-                </div>
-              } />
+              <Route
+                path="*"
+                element={
+                  <div className="min-h-screen flex items-center justify-center">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                      Page Coming Soon
+                    </h1>
+                  </div>
+                }
+              />
             </Routes>
           </main>
           <Footer />
-          {/* <Chatbot /> */}
+          {/* ✅ Chatbot rendered globally on all pages */}
+          <Chatbot />
         </div>
       </Router>
     </ThemeProvider>
